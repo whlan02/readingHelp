@@ -2,6 +2,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                                QTextEdit, QLineEdit, QLabel, QScrollArea, QFrame)
 from PySide6.QtCore import Qt, Signal, QSize, QThread, Slot
 from PySide6.QtGui import QColor, QTextCursor, QFont
+import markdown
+import re
 
 from utils.ai_handler import AIHandler
 
@@ -27,6 +29,9 @@ class ChatWidget(QWidget):
         self.context_text = ""
         self.selected_text = ""
         
+        # 初始化Markdown转换器
+        self.md = markdown.Markdown(extensions=['tables', 'fenced_code'])
+        
         self.init_ui()
     
     def init_ui(self):
@@ -40,9 +45,31 @@ class ChatWidget(QWidget):
         # 聊天记录显示区域
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
-        self.chat_display.setStyleSheet(
-            "background-color: white; border: 1px solid #cccccc; border-radius: 5px;"
-        )
+        self.chat_display.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                border: 1px solid #cccccc;
+                border-radius: 5px;
+                font-family: "Microsoft YaHei", Arial, sans-serif;
+            }
+            QTextEdit p {
+                margin: 0;
+                padding: 0;
+            }
+            QTextEdit code {
+                background-color: #f6f8fa;
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-family: Consolas, Monaco, monospace;
+            }
+            QTextEdit pre {
+                background-color: #f6f8fa;
+                padding: 10px;
+                border-radius: 5px;
+                margin: 5px 0;
+                font-family: Consolas, Monaco, monospace;
+            }
+        """)
         
         # 输入框和发送按钮
         input_layout = QHBoxLayout()
@@ -65,13 +92,46 @@ class ChatWidget(QWidget):
         # 初始提示
         self.chat_display.setText("选择单词并点击「询问AI」按钮开始对话...")
     
+    def markdown_to_html(self, text):
+        """将Markdown文本转换为HTML，并进行一些额外的格式化"""
+        # 转换Markdown为HTML
+        html = self.md.convert(text)
+        
+        # 重置转换器状态（避免多次转换出现问题）
+        self.md.reset()
+        
+        # 确保代码块有正确的样式
+        html = html.replace('<code>', '<code style="background-color: #f6f8fa; padding: 2px 4px; border-radius: 3px;">')
+        html = html.replace('<pre>', '<pre style="background-color: #f6f8fa; padding: 10px; border-radius: 5px; margin: 5px 0;">')
+        
+        return html
+    
     def new_conversation(self, context, selected_text, prompt):
+        # 清空聊天显示
+        self.chat_display.clear()
+        
         # 保存上下文和选中文本，用于后续追问
         self.context_text = context
         self.selected_text = selected_text
         
-        # 清除聊天记录
+        # 清除聊天记录，开始新对话
         self.chat_history = []
+        
+        # 显示原文
+        self.chat_display.append(
+            f"<div style='margin-bottom: 10px;'>"
+            f"<div style='font-weight: bold; color: #666666;'>原文:</div>"
+            f"<div style='background-color: #f5f5f5; padding: 8px; border-radius: 5px;'>"
+            f"{context}</div></div>"
+        )
+        
+        # 显示选中的单词
+        self.chat_display.append(
+            f"<div style='margin-bottom: 10px;'>"
+            f"<div style='font-weight: bold; color: #666666;'>选中单词:</div>"
+            f"<div style='background-color: #e3f2fd; padding: 8px; border-radius: 5px;'>"
+            f"{selected_text}</div></div>"
+        )
         
         # 发送第一条消息
         self.display_user_message(prompt)
@@ -135,12 +195,15 @@ class ChatWidget(QWidget):
         cursor.select(QTextCursor.LineUnderCursor)
         cursor.removeSelectedText()
         
+        # 将Markdown转换为HTML
+        html_response = self.markdown_to_html(response)
+        
         # 显示AI回复
         self.chat_display.append(
             f"<div style='margin-bottom: 10px;'>"
             f"<div style='font-weight: bold; color: #00897b;'>AI:</div>"
             f"<div style='background-color: #e0f2f1; padding: 8px; border-radius: 5px;'>"
-            f"{response}</div></div>"
+            f"{html_response}</div></div>"
         )
         
         # 滚动到底部

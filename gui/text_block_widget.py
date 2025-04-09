@@ -73,6 +73,10 @@ class TextBlockWidget(QWidget):
         
         self.word_buttons = []
         self.full_text = ""
+        
+        # 设置固定宽度
+        self.setMinimumWidth(400)
+        self.setMaximumWidth(600)
     
     def set_text(self, text):
         # 清除旧内容
@@ -84,31 +88,54 @@ class TextBlockWidget(QWidget):
         
         # 按行分割文本
         lines = text.split("\n")
+        current_line_widget = None
+        current_line_layout = None
+        current_line_width = 0
+        max_line_width = 550  # 最大行宽（像素）
         
         for line in lines:
             if not line.strip():
                 continue
-                
-            # 创建一个水平布局用于一行文本
-            line_widget = QWidget()
-            line_layout = QHBoxLayout(line_widget)
-            line_layout.setSpacing(5)
-            line_layout.setContentsMargins(0, 0, 0, 0)
             
-            # 使用空格分割单词（简化处理，实际应用中可能需要更复杂的分词逻辑）
+            # 创建新行
+            current_line_widget = QWidget()
+            current_line_layout = QHBoxLayout(current_line_widget)
+            current_line_layout.setSpacing(5)
+            current_line_layout.setContentsMargins(0, 0, 0, 0)
+            current_line_width = 0
+            
+            # 使用空格分割单词
             words = line.split()
             
             for word in words:
                 word_btn = WordButton(word)
                 word_btn.clicked.connect(self.on_word_clicked)
-                line_layout.addWidget(word_btn)
+                
+                # 计算单词按钮的宽度
+                word_width = word_btn.sizeHint().width()
+                
+                # 如果当前行宽度加上新单词会超出限制，创建新行
+                if current_line_width + word_width > max_line_width:
+                    # 添加当前行到布局
+                    current_line_layout.addStretch(1)
+                    self.layout.addWidget(current_line_widget)
+                    
+                    # 创建新行
+                    current_line_widget = QWidget()
+                    current_line_layout = QHBoxLayout(current_line_widget)
+                    current_line_layout.setSpacing(5)
+                    current_line_layout.setContentsMargins(0, 0, 0, 0)
+                    current_line_width = 0
+                
+                # 添加单词到当前行
+                current_line_layout.addWidget(word_btn)
+                current_line_width += word_width + 5  # 5是间距
                 self.word_buttons.append(word_btn)
             
-            # 添加弹性空间，使单词靠左对齐
-            line_layout.addStretch(1)
-            
-            # 将行添加到主布局
-            self.layout.addWidget(line_widget)
+            # 添加最后一行
+            if current_line_widget:
+                current_line_layout.addStretch(1)
+                self.layout.addWidget(current_line_widget)
         
         # 添加弹性空间，使所有内容靠上对齐
         self.layout.addStretch(1)
@@ -131,4 +158,4 @@ class TextBlockWidget(QWidget):
         return self.full_text
     
     def sizeHint(self):
-        return QSize(400, 400) 
+        return QSize(500, 400) 

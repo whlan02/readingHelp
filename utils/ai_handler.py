@@ -28,31 +28,31 @@ class AIHandler:
             # 创建系统提示
             system_message = (
                 "你是一位精通德语的语言学家和教师，专门帮助中文学习者理解德语文本。"
-                "请用中文解释德语单词和短语在特定语境中的含义、用法和语法特点。"
-                "解释要简明扼要，针对中文学习者，不要过于专业化。"
-                "不需要将德语单词翻译成英语，直接用中文解释即可。"
+                
             )
             messages.append({"role": "system", "content": system_message})
             
             # 如果有上下文，添加到消息中
-            if context and "original_text" in context:
-                original_text = context["original_text"]
-                selected_text = context["selected_text"]
+            if context:
+                if "original_text" in context:
+                    original_text = context["original_text"]
+                    selected_text = context["selected_text"]
+                    
+                    context_message = ( f"原文：\n\n{original_text}\n\n"
+                                        f"请解释在这段文本中'{selected_text}'的含义和用法。")
+                    messages.append({"role": "system", "content": context_message})
                 
-                context_message = f"以下是完整的德语文本：\n\n{original_text}\n\n用户希望了解在这个语境中的'{selected_text}'。"
-                messages.append({"role": "system", "content": context_message})
-            
-            # 添加历史对话（如果有）
-            if context and "chat_history" in context:
-                for msg in context["chat_history"]:
-                    messages.append(msg)
+                # 添加历史对话（如果有）
+                if "chat_history" in context:
+                    for msg in context["chat_history"]:
+                        messages.append(msg)
             
             # 添加当前用户问题
             messages.append({"role": "user", "content": prompt})
             
             # 调用API
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # 可以根据需要替换为其他模型
+                model="gpt-4o-mini",  # 可以根据需要替换为其他模型
                 messages=messages,
                 temperature=0.7,
                 max_tokens=500

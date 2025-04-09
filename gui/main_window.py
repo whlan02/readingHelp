@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton,
                                QWidget, QScrollArea, QLabel, QFrame, QSplitter)
-from PySide6.QtCore import Qt, Signal, QRect
-from PySide6.QtGui import QPixmap, QScreen
+from PySide6.QtCore import Qt, Signal, QRect, QTimer
+from PySide6.QtGui import QPixmap, QScreen, QKeySequence, QShortcut
+from PySide6.QtWidgets import QApplication
 
 from gui.screenshot_widget import ScreenshotWidget
 from gui.text_block_widget import TextBlockWidget
@@ -22,6 +23,10 @@ class MainWindow(QMainWindow):
         self.ai_handler = AIHandler()
         
         self.selected_words = []
+        self.original_pixmap = None
+        
+        # 创建状态栏
+        self.statusBar().showMessage("准备就绪")
         
         self.init_ui()
         self.setup_connections()
@@ -34,13 +39,17 @@ class MainWindow(QMainWindow):
         toolbar = QWidget()
         toolbar_layout = QHBoxLayout(toolbar)
         
-        self.screenshot_btn = QPushButton("截图")
+        self.screenshot_btn = QPushButton("截图 (Ctrl+G)")
         self.ask_ai_btn = QPushButton("询问AI")
         self.ask_ai_btn.setEnabled(False)
         
         toolbar_layout.addWidget(self.screenshot_btn)
         toolbar_layout.addWidget(self.ask_ai_btn)
         toolbar_layout.addStretch()
+        
+        # 添加截图快捷键
+        self.screenshot_shortcut = QShortcut(QKeySequence("Ctrl+G"), self)
+        self.screenshot_shortcut.activated.connect(self.take_screenshot)
         
         # 主分割区域
         splitter = QSplitter(Qt.Horizontal)
@@ -84,12 +93,31 @@ class MainWindow(QMainWindow):
         self.text_block_widget.word_selected.connect(self.on_word_selected)
     
     def take_screenshot(self):
-        self.hide()  # 隐藏主窗口
-        self.screenshot_widget.start_screenshot()
+        # 截图前最小化窗口并释放资源，确保截图工具能捕获到屏幕内容
+        self.showMinimized()
+        QApplication.processEvents()  # 处理挂起的事件，确保窗口真正最小化
+        
+        # 延迟一小段时间再启动截图
+        # 使用QTimer单次触发
+        QTimer.singleShot(200, self._execute_screenshot)
+    
+    def _execute_screenshot(self):
+        # 断开之前的连接（如果有）
+        try:
+            self.screenshot_widget.screenshot_taken.disconnect()
+        except:
+            pass
+        
+        # 连接新的信号槽
         self.screenshot_widget.screenshot_taken.connect(self.process_screenshot)
+        
+        # 启动截图
+        self.screenshot_widget.start_screenshot()
     
     def process_screenshot(self, pixmap):
-        self.show()  # 显示主窗口
+        # 显示主窗口（从最小化状态恢复）
+        self.showNormal()
+        self.activateWindow()  # 确保窗口获得焦点
         
         # 显示截图
         scaled_pixmap = pixmap.scaled(
@@ -99,14 +127,23 @@ class MainWindow(QMainWindow):
             Qt.SmoothTransformation
         )
         self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setAlignment(Qt.AlignCenter)
+        
+        # 保存原始截图，方便处理
+        self.original_pixmap = pixmap
         
         # OCR处理
+        self.statusBar().showMessage("正在识别文本...")
+        QApplication.processEvents()  # 更新UI
+        
         text = self.ocr_handler.process_image(pixmap)
         self.text_block_widget.set_text(text)
         
         # 重置选择
         self.selected_words = []
         self.ask_ai_btn.setEnabled(False)
+        
+        self.statusBar().showMessage("文本识别完成", 3000)
     
     def on_word_selected(self, word, is_selected):
         if is_selected and word not in self.selected_words:
