@@ -42,9 +42,12 @@ class MainWindow(QMainWindow):
         self.screenshot_btn = QPushButton("截图 (Ctrl+G)")
         self.ask_ai_btn = QPushButton("询问AI")
         self.ask_ai_btn.setEnabled(False)
+        self.translate_btn = QPushButton("翻译全文")
+        self.translate_btn.setEnabled(False)
         
         toolbar_layout.addWidget(self.screenshot_btn)
         toolbar_layout.addWidget(self.ask_ai_btn)
+        toolbar_layout.addWidget(self.translate_btn)
         toolbar_layout.addStretch()
         
         # 添加截图快捷键
@@ -91,6 +94,7 @@ class MainWindow(QMainWindow):
         self.screenshot_btn.clicked.connect(self.take_screenshot)
         self.ask_ai_btn.clicked.connect(self.ask_ai)
         self.text_block_widget.word_selected.connect(self.on_word_selected)
+        self.translate_btn.clicked.connect(self.translate_full_text)
     
     def take_screenshot(self):
         # 截图前最小化窗口并释放资源，确保截图工具能捕获到屏幕内容
@@ -142,6 +146,7 @@ class MainWindow(QMainWindow):
         # 重置选择
         self.selected_words = []
         self.ask_ai_btn.setEnabled(False)
+        self.translate_btn.setEnabled(True)
         
         self.statusBar().showMessage("文本识别完成", 3000)
     
@@ -164,4 +169,20 @@ class MainWindow(QMainWindow):
         prompt = f"在这个语境下，如何理解'{selected_text}'"
         
         # 发送到聊天窗口，AI会异步回复
-        self.chat_widget.new_conversation(context, selected_text, prompt) 
+        self.chat_widget.new_conversation(context, selected_text, prompt)
+
+    def translate_full_text(self):
+        """请求 AI 翻译 OCR 识别出的全部文本"""
+        full_text = self.text_block_widget.get_full_text()
+        if not full_text:
+            self.statusBar().showMessage("没有识别到文本可供翻译", 3000)
+            return
+
+        # 准备翻译的 Prompt
+        prompt = f"请将以下德语文本翻译成中文，直接给出译文即可：\n\n{full_text}"
+
+        # 使用 chat_widget 发起新对话进行翻译
+        # 注意：这里复用了 new_conversation，上下文和选中词都设为全文，
+        # prompt 表明了翻译意图。ChatWidget 会显示原文和这个 prompt。
+        self.chat_widget.new_conversation(context=full_text, selected_text="", prompt=prompt)
+        self.statusBar().showMessage("正在请求翻译...", 3000) 

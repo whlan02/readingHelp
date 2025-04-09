@@ -55,7 +55,8 @@ class AIHandler:
                 model="gpt-4o-mini",  # 可以根据需要替换为其他模型
                 messages=messages,
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=500,
+                
             )
             
             # 返回回复内容
