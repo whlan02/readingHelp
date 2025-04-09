@@ -1,0 +1,27 @@
+# Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 环境变量文件
+.env
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# 开发工具相关
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 临时文件
+temp_*.png
+*.log
+
+# 构建文件
+build/
+dist/
+*.spec 
