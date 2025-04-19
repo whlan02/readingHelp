@@ -38,8 +38,7 @@ class AIHandler:
                     original_text = context["original_text"]
                     selected_text = context["selected_text"]
                     
-                    context_message = ( f"原文：\n\n{original_text}\n\n"
-                                        f"请解释在这段文本中'{selected_text}'的含义和用法。")
+                    context_message = ( f"请参考以下原文：{original_text}。在这段文本中，'{selected_text}' 的含义和用法是什么？")
                     messages.append({"role": "system", "content": context_message})
                 
                 # 添加历史对话（如果有）

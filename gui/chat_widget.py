@@ -136,8 +136,14 @@ class ChatWidget(QWidget):
         # 发送第一条消息
         self.display_user_message(prompt)
         
+        # 创建初始上下文
+        initial_context = {
+            "original_text": self.context_text,
+            "selected_text": self.selected_text
+        }
+        
         # 创建线程获取AI回复
-        self.request_ai_response(prompt)
+        self.request_ai_response(prompt, initial_context)
     
     def send_message(self):
         message = self.message_input.text().strip()

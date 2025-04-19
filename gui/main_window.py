@@ -165,9 +165,9 @@ class MainWindow(QMainWindow):
         
         selected_text = " ".join(self.selected_words)
         context = self.text_block_widget.get_full_text()
-        
-        prompt = f"在这个语境下，如何理解'{selected_text}'"
-        
+
+        prompt = f"请参考以下原文：{context}。在这段文本中，'{selected_text}' 的含义和用法是什么？"
+
         # 发送到聊天窗口，AI会异步回复
         self.chat_widget.new_conversation(context, selected_text, prompt)
 
